@@ -4,57 +4,55 @@ import Navbar from "../navbar/Navbar";
 import { Outlet } from "react-router-dom";
 
 const Dashboard = () => {
-  const [total, setTotal] = useState(0);
-  const [sold, setSold] = useState(0);
-  const [exported, setExported] = useState(0);
-  const [money, setMoney] = useState(0);
-
-  const token = localStorage.getItem("accessToken");
+  const [values, setValues] = useState({ total: 0, sold: 0, exported: 0, money: 0 });
 
   useEffect(() => {
-    fetch("https://backend.magnateshop.uz/api/products", {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+
+    fetch("https://backend.magnateshop.uz/api/products?page=1&limit=100", {
       headers: { Authorization: "Bearer " + token },
     })
       .then((res) => res.json())
       .then((res) => {
-        if (res.success) {
-          const items = res.data.items;
-          setTotal(items.length);
-          setSold(items.filter((i) => !i.isActive).length);
-          setExported(items.filter((i) => i.stock === 0).length);
-          let sum = 0;
-          items.forEach((i) => (sum += i.price * i.stock));
-          setMoney(sum);
-        }
-      });
+        const items = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+        const sum = items.reduce((acc, i) => acc + (i.price * i.stock), 0);
+        setValues({
+          total: res.data?.total || items.length,
+          sold: items.filter((i) => !i.isActive).length,
+          exported: items.filter((i) => i.stock === 0).length,
+          money: sum,
+        });
+      })
+      .catch(() => {});
   }, []);
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         <Navbar />
-        <div className="p-6">
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Jami mahsulotlar</p>
-              <p className="text-2xl font-bold mt-2">{total}</p>
+        <main className="flex-1 p-6">
+          <div className="grid grid-cols-4 gap-5 mb-6">
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5 text-white">
+              <p className="text-sm font-medium opacity-80">Jami mahsulotlar</p>
+              <p className="text-3xl font-bold mt-2">{values.total}</p>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Sotilganlar</p>
-              <p className="text-2xl font-bold mt-2">{sold}</p>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5 text-white">
+              <p className="text-sm font-medium opacity-80">Sotilganlar</p>
+              <p className="text-3xl font-bold mt-2">{values.sold}</p>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Export qilingan</p>
-              <p className="text-2xl font-bold mt-2">{exported}</p>
+            <div className="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white">
+              <p className="text-sm font-medium opacity-80">Export qilingan</p>
+              <p className="text-3xl font-bold mt-2">{values.exported}</p>
             </div>
-            <div className="bg-white p-4 rounded-lg border border-gray-200">
-              <p className="text-sm text-gray-500">Jami pul</p>
-              <p className="text-2xl font-bold mt-2">{money.toLocaleString()} so'm</p>
+            <div className="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-5 text-white">
+              <p className="text-sm font-medium opacity-80">Jami pul</p>
+              <p className="text-3xl font-bold mt-2">{values.money.toLocaleString()} so'm</p>
             </div>
           </div>
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
